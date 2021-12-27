@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from router.account import router
 
 app = FastAPI()
+
 Base.metadata.create_all(engine)
 
 app.include_router(router)
@@ -12,7 +13,6 @@ app.include_router(router)
 
 @app.get("/")
 async def root(db: Session = Depends(get_db)):
-    print(db.query(Account).all())
     return {"message": "Hello World"}
 
 

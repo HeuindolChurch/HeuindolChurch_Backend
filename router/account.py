@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 import datetime
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from db import Account, get_db
+from provider import AuthProvider
 import body
 
 router = APIRouter(
@@ -13,7 +14,10 @@ router = APIRouter(
 
 
 @router.get('/')
-async def get_account(db: Session = Depends(get_db), date: datetime.date = datetime.date.today()):
+async def get_account(db: Session = Depends(get_db), date: datetime.date = datetime.date.today(),
+                      auth_provider: AuthProvider = Depends(AuthProvider())):
+    await auth_provider.check_authority(1)
+
     start_at = date.replace(day=1)
     end_at = start_at + relativedelta(months=1)
 
@@ -21,8 +25,14 @@ async def get_account(db: Session = Depends(get_db), date: datetime.date = datet
 
 
 @router.post('/')
-async def post_account(req: body.Account, db: Session = Depends(get_db)):
+async def post_account(req: body.Account, db: Session = Depends(get_db), token=Depends(AuthProvider()),
+                       auth_provider: AuthProvider = Depends(AuthProvider())):
+    await auth_provider.check_authority(2)
+
     account = req.dict()
+
+    if token.level > 2:
+        raise HTTPException(status_code=403, detail='권한이 부족합니다.')
 
     last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id)).first()
 
