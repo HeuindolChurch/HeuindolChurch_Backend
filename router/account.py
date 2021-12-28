@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 import datetime
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
@@ -24,14 +24,32 @@ async def get_account(db: Session = Depends(get_db), date: datetime.date = datet
     return db.query(Account).filter(Account.date >= start_at, Account.date < end_at).order_by(Account.date).all()
 
 
+@router.put('/{account_id}')
+async def edit_account(req: body.Account, account_id: int, db: Session = Depends(get_db),
+                       auth_provider: AuthProvider = Depends(AuthProvider())):
+    await auth_provider.check_authority(2)
+    account = db.query(Account).filter_by(id=account_id)
+    new_account = req.dict()
+    new_account['id'] = account_id
+
+    request = {k: v for k, v in new_account.items()}
+
+    for key, value in request.items():
+        setattr(account, key, value)
+
+    db.commit()
+
+    return account
+
+
 @router.post('/')
-async def post_account(req: body.Account, db: Session = Depends(get_db), token=Depends(AuthProvider()),
+async def post_account(req: body.Account, db: Session = Depends(get_db),
                        auth_provider: AuthProvider = Depends(AuthProvider())):
     await auth_provider.check_authority(2)
 
     account = req.dict()
 
-    if token.level > 2:
+    if auth_provider.level > 2:
         raise HTTPException(status_code=403, detail='권한이 부족합니다.')
 
     last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id)).first()
@@ -50,3 +68,15 @@ async def post_account(req: body.Account, db: Session = Depends(get_db), token=D
     db.commit()
 
     return req
+
+
+@router.delete('/{account_id}')
+async def delete_account(account_id: int, db: Session = Depends(get_db), auth_provider=Depends(AuthProvider)):
+    await auth_provider.check_authority(2)
+    account = db.query(Account).filter_by(id=account_id).first()
+
+    db.delete(account)
+    db.commit()
+
+    return Response(status_code=200)
+

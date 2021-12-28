@@ -6,7 +6,12 @@ from datetime import datetime
 class User(BaseModel):
     email: str
     password: str
-    level: int
+    level: Optional[int]
     name: str
-    isDeleted: bool
-    date: datetime
+    isDeleted: Optional[bool]
+    created_at: Optional[datetime]
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
