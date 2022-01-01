@@ -29,8 +29,15 @@ async def create_user(req_user: body.User, db: Session = Depends(get_db)):
 
 
 @router.get('/')
-async def get_user(db: Session = Depends(get_db)):
+async def get_users(db: Session = Depends(get_db)):
     return db.query(User).all()
+
+
+@router.get('/{user_id}')
+async def get_user(user_id: int, db: Session = Depends(get_db), auth_provider: AuthProvider = Depends(AuthProvider())):
+    await auth_provider.check_mine(user_id)
+
+    return db.query(User).filter_by(id=user_id).first()
 
 
 @router.put('/{user_id}')

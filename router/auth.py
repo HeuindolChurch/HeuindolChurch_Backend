@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get('/')
+@router.post('/')
 async def get_token(req_user: body.UserLogin, db: Session = Depends(get_db)):
     user = req_user.dict()
     check = db.query(User).filter_by(email=req_user.email).one()
