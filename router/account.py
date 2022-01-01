@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 import datetime
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 
 from db import Account, get_db
 from provider import AuthProvider
@@ -21,7 +21,8 @@ async def get_account(db: Session = Depends(get_db), date: datetime.date = datet
     start_at = date.replace(day=1)
     end_at = start_at + relativedelta(months=1)
 
-    return db.query(Account).filter(Account.date >= start_at, Account.date < end_at).order_by(Account.date).all()
+    return db.query(Account).filter(Account.date >= start_at, Account.date < end_at).order_by(Account.date,
+                                                                                              Account.price).all()
 
 
 @router.put('/{account_id}')
@@ -52,7 +53,12 @@ async def post_account(req: body.Account, db: Session = Depends(get_db),
     if auth_provider.level > 2:
         raise HTTPException(status_code=403, detail='권한이 부족합니다.')
 
-    last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id)).first()
+    if account['price'] > 0:
+        last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id),
+                                                                                  desc(Account.price)).first()
+    else:
+        last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id),
+                                                                                  asc(Account.price)).first()
 
     if last_account is not None:
         if req.date < last_account.as_dict()['date']:
@@ -79,4 +85,3 @@ async def delete_account(account_id: int, db: Session = Depends(get_db), auth_pr
     db.commit()
 
     return Response(status_code=200)
-
