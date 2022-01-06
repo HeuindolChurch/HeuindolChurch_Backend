@@ -18,13 +18,14 @@ router = APIRouter(
 @router.post('/')
 async def get_token(req_user: body.UserLogin, db: Session = Depends(get_db)):
     user = req_user.dict()
-    check = db.query(User).filter_by(email=req_user.email).one()
-    user_token = db.query(Token).filter_by(userId=check.id).first()
+    check = db.query(User).filter_by(email=user['email']).first()
 
     if check is None:
         raise HTTPException(status_code=403, detail='사용자가 존재하지 않습니다.')
     if not checkpw(user['password'].encode('utf-8'), check.password.encode('utf-8')):
         raise HTTPException(status_code=403, detail='비밀번호가 틀렸습니다.')
+
+    user_token = db.query(Token).filter_by(userId=check.id).first()
 
     access_token = jwt.encode({'user_id': check.as_dict()['id'],
                                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=3)}, environ['JWT_SECRET'],
@@ -42,4 +43,6 @@ async def get_token(req_user: body.UserLogin, db: Session = Depends(get_db)):
 
     db.commit()
 
-    return {'access-token': access_token, 'refresh-token': refresh_token}
+    info = check.as_dict()
+
+    return {'access-token': access_token, 'refresh-token': refresh_token, 'name': info['name'], 'level': info['level']}

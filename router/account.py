@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 
-from db import Account, get_db
+from db import Account, AccountMonth, get_db
 from provider import AuthProvider
 import body
 
@@ -22,7 +22,8 @@ async def get_account(db: Session = Depends(get_db), date: datetime.date = datet
     end_at = start_at + relativedelta(months=1)
 
     return db.query(Account).filter(Account.date >= start_at, Account.date < end_at).order_by(Account.date,
-                                                                                              Account.price).all()
+                                                                                              Account.price,
+                                                                                              Account.id).all()
 
 
 @router.put('/{account_id}')
@@ -50,25 +51,24 @@ async def post_account(req: body.Account, db: Session = Depends(get_db),
 
     account = req.dict()
 
-    if auth_provider.level > 2:
+    if auth_provider.level < 2:
         raise HTTPException(status_code=403, detail='권한이 부족합니다.')
 
-    if account['price'] > 0:
-        last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id),
-                                                                                  desc(Account.price)).first()
+    balance_date = req.date.replace(day=1)
+    balance = db.query(Account).filter_by(date=balance_date).first()
+    before_balance = db.query(Account).filter_by(date=balance_date - relativedelta(months=1)).first()
+
+    if balance is None:
+        db.add(AccountMonth(date=balance_date, balance=before_balance.balance + account['price']))
+    elif req.insert is True:
+        balances = db.query(Account).filter(AccountMonth.date >= balance_date).all()
+
+        if before_balance is None:
+            db.add(AccountMonth(date=balance_date, balance=balance.balance - account['price']))
+        for bal in balances:
+            bal.balance = bal.balance + req.price
     else:
-        last_account = db.query(Account).filter(Account.date > req.date).order_by(desc(Account.id),
-                                                                                  asc(Account.price)).first()
-
-    if last_account is not None:
-        if req.date < last_account.as_dict()['date']:
-            after_accounts = db.query(Account).filter(Account.date > req.date).all()
-            account['balance'] = after_accounts[0].balance - after_accounts[0].price + account['price']
-
-            for after_account in after_accounts:
-                after_account.balance += account['price']
-        else:
-            account['balance'] = last_account.as_dict()['balance'] + account['price']
+        balance.balance += req.price
 
     db.add(Account(**account))
     db.commit()

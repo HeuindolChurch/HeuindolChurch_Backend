@@ -2,13 +2,11 @@ from sqlalchemy import Column, Integer, String, Date
 from .connection import Base
 
 
-class Account(Base):
-    __tablename__ = 'account'
+class AccountMonth(Base):
+    __tablename__ = 'account_month'
 
     id = Column(Integer, primary_key=True, index=True)
-    reason = Column(String(100), nullable=False)
-    price = Column(Integer, nullable=False)
-    note = Column(String(300), nullable=True)
+    balance = Column(Integer, nullable=True)
     date = Column(Date, nullable=False)
 
     def as_dict(self):
