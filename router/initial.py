@@ -1,22 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
-import datetime
-from dateutil.relativedelta import relativedelta
+from provider import AuthProvider
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
-from bcrypt import checkpw
 import jwt
 from os import environ
 
 from db import AccountMonth, Token, get_db
 import body
 
-router = APIRouter(
-    prefix='/init'
-)
+router = APIRouter()
 
 
 @router.post('/')
-async def initialize_account(req: body.AccountMonth, db: Session = Depends(get_db)):
+async def initialize_account(req: body.AccountMonth, db: Session = Depends(get_db),
+                             auth_provider: AuthProvider = Depends(AuthProvider())):
+    await auth_provider.check_authority(2)
+
+    req.date = req.date.replace(day=1)
+
     db.add(AccountMonth(**req.dict()))
     db.commit()
 

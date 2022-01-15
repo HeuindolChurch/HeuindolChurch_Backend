@@ -4,7 +4,7 @@ from . import user, account, auth, initial
 
 router = APIRouter()
 
-router.add_api_route('/', account.router)
-router.add_api_route('/', auth.router)
-router.add_api_route('/', user.router)
-router.add_api_route('/', initial.router)
+router.include_router(account.router, prefix='/account', )
+router.include_router(auth.router, prefix='/auth')
+router.include_router(user.router, prefix='/user')
+router.include_router(initial.router, prefix='/init')

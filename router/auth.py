@@ -10,9 +10,7 @@ from os import environ
 from db import User, Token, get_db
 import body
 
-router = APIRouter(
-    prefix='/auth'
-)
+router = APIRouter()
 
 
 @router.post('/')

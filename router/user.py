@@ -8,9 +8,7 @@ from db import User, get_db
 from provider.AuthProvider import AuthProvider
 import body
 
-router = APIRouter(
-    prefix='/user'
-)
+router = APIRouter()
 
 
 @router.post('/')
